@@ -14,6 +14,8 @@ var async = require('async');
 
 var cnodeUrl = 'https://cnodejs.org';
 app.get('/topics', function(req, res){
+	console.log('GET ' + req.url);
+	
 	superagent.get(cnodeUrl)
 	.end(function(err, sres){
 		if(err){
@@ -61,18 +63,20 @@ app.get('/topics', function(req, res){
 		});
 		*/
 		
-		var concurrencyCount = 0;
-		console.log('total count :' + items.length);
-		async.mapLimit(items, 5, function(item, callback){
-			concurrencyCount ++;
-			var startDate = new Date();
+		var startDate = new Date();
+		console.log('item count :' + items.length);
+
+		async.mapLimit(items, 10, function(item, callback){
+
 			superagent.get(item)
 			.end(function(err, res){
 				if(err){
-					return console.log(err);
+					console.log('Error:' + item);
+					//return callback(err);// 如果传入err,则进入结果回调。			
+					return callback();
 				}
-				var duration = new Date() - startDate;
-				console.log("并发数：" + concurrencyCount + '　耗时：' + duration);
+
+				console.log('GET:' + item);
 				var $ = cheerio.load(res.text);
 				var title = $('.topic_full_title').eq(0).text().trim();
 				var content = $('.markdown-text').eq(0).text().trim();
@@ -80,22 +84,53 @@ app.get('/topics', function(req, res){
 					return $(this).text().trim();
 				}).get();
 				callback(null, {title:title,/*content:content,*/replies:replies});		
-				concurrencyCount --;		
 			});
 		}, function(err, result){
-			console.log('Final!');
+			result = result.filter(n => n);
+			console.log('complete:' + result.length 
+			+ '\nduration:' + (new Date() - startDate) + 'ms');
 			var str = JSON.stringify(result,null,4);
 			res
 				.set({
 					'content-type':'text/json'
 				})
-				.send('<pre>'+str+'</pre>');
+				.send(str);
 		})
 		
 	});
 });
 
+function fibonacci(n){
+	
+	if(typeof n != 'number' || isNaN(n)){
+		throw new Error('n should be a Number');
+	}
+	if(n < 0){
+		throw new Error('n should >= 0');
+	}
+	if(n > 20){
+		throw new Error('n should <= 20');
+	}
+	if(n === 0){
+		return 0;
+	}
+	if(n === 1){
+		return 1;
+	}
+	return fibonacci(n-1) + fibonacci(n-2);
+	
+}
 
+app.get('/fib', function(req, res){
+	var n = +(req.query.n);
+	try{
+		res.send('fib('+n+'):' + fibonacci(n))			
+	}catch(e){
+		res
+		.status(500)
+		.send(e.message);
+	}
+});
 
 app.listen(config.port, function(){
 	console.log('App listening on port '+config.port);
