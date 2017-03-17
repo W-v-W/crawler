@@ -2,19 +2,23 @@ var config = require('./config');
 
 var express = require('express');
 var app = express();
+var favicon = require('serve-favicon');
 
 var superagent = require('superagent');
 var cheerio = require('cheerio');
 
 var eventproxy = require('eventproxy');
+var async = require('async');
 
 var url = require('url');
 
-var async = require('async');
-
 var cnodeUrl = 'https://cnodejs.org';
+
+app.use(favicon(__dirname + '/public/images/favicon.ico'));
+
+
+// ----------------------------
 app.get('/topics', function(req, res){
-	console.log('GET ' + req.url);
 	
 	superagent.get(cnodeUrl)
 	.end(function(err, sres){
@@ -108,8 +112,8 @@ function fibonacci(n){
 	if(n < 0){
 		throw new Error('n should >= 0');
 	}
-	if(n > 20){
-		throw new Error('n should <= 20');
+	if(n > 30){
+		throw new Error('n should <= 30');
 	}
 	if(n === 0){
 		return 0;
@@ -135,3 +139,6 @@ app.get('/fib', function(req, res){
 app.listen(config.port, function(){
 	console.log('App listening on port '+config.port);
 });
+
+exports.app = app;
+exports.fibonacci = fibonacci;
