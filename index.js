@@ -1,4 +1,5 @@
 var config = require('./config');
+var logger = require('./common/logger');
 
 var express = require('express');
 var app = express();
@@ -70,36 +71,70 @@ app.get('/topics', function(req, res){
 		var startDate = new Date();
 		console.log('item count :' + items.length);
 
-		async.mapLimit(items, 10, function(item, callback){
+		var callbacks = [];
+		
+		var timer = setTimeout(function(){
+			callbacks.some(function(obj){
+				if(!obj.hasCalled){
+					obj.fn(new Error('TIME-OUT'));
+					obj.hasCalled = true;
+					return true;
+				}
+				return false;
+			});
+		}, 20000);
 
+		var foo = function(item, callback){
+			
+			var obj = {'hasCalled':false, 'fn':callback};
+			var _callback = function(err, result){
+				if(!obj.hasCalled){
+					callback(err, result);
+					obj.hasCalled = true;
+				}
+			}
+			callbacks.push(obj);
+			
 			superagent.get(item)
 			.end(function(err, res){
+	
 				if(err){
 					console.log('Error:' + item);
-					//return callback(err);// 如果传入err,则进入结果回调。			
-					return callback();
+					//return callback(err);// 如果传入err,则进入结果回调。	
+					 _callback()
+				}else{
+					console.log('GET:' + item);
+					var $ = cheerio.load(res.text);
+					var title = $('.topic_full_title').eq(0).text().trim();
+					var content = $('.markdown-text').eq(0).text().trim();
+					var replies = $('.reply_content').map(function(){
+						return $(this).text().trim();
+					}).get();
+					console.log(callback);
+					
+					_callback(null, {title:title, replies:replies});		
 				}
-
-				console.log('GET:' + item);
-				var $ = cheerio.load(res.text);
-				var title = $('.topic_full_title').eq(0).text().trim();
-				var content = $('.markdown-text').eq(0).text().trim();
-				var replies = $('.reply_content').map(function(){
-					return $(this).text().trim();
-				}).get();
-				callback(null, {title:title,/*content:content,*/replies:replies});		
+								
 			});
-		}, function(err, result){
+		};
+		
+	
+		async.mapLimit(items, 10, foo, function(err, result){
+			clearTimeout(timer);
+			
+			if(err){
+				console.log('err:' + err.message);				
+			}
+
 			result = result.filter(n => n);
 			console.log('complete:' + result.length 
 			+ '\nduration:' + (new Date() - startDate) + 'ms');
 			var str = JSON.stringify(result,null,4);
-			res
-				.set({
+			res.set({
 					'content-type':'text/json'
 				})
 				.send(str);
-		})
+		});
 		
 	});
 });
@@ -137,7 +172,7 @@ app.get('/fib', function(req, res){
 });
 
 app.listen(config.port, function(){
-	console.log('App listening on port '+config.port);
+	logger.info('App ilstening on port ' + config.port);
 });
 
 exports.app = app;
