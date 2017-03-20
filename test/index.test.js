@@ -60,7 +60,7 @@ describe('test/index.test.js', function(){
 	})
 	
 	describe('GET /topics', function(){
-		this.timeout(30000);
+		this.timeout(20000);
 		it('should return a json array', function(done){
 			request.get('/topics')
 				.expect(200)

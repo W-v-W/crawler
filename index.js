@@ -69,8 +69,8 @@ app.get('/topics', function(req, res){
 		*/
 		
 		var startDate = new Date();
-		console.log('item count :' + items.length);
-
+		logger.debug('item count: %d', items.length);
+		
 		var callbacks = [];
 		
 		var timer = setTimeout(function(){
@@ -82,7 +82,7 @@ app.get('/topics', function(req, res){
 				}
 				return false;
 			});
-		}, 20000);
+		}, 10000);
 
 		var foo = function(item, callback){
 			
@@ -99,18 +99,18 @@ app.get('/topics', function(req, res){
 			.end(function(err, res){
 	
 				if(err){
-					console.log('Error:' + item);
+					logger.error(err);
 					//return callback(err);// 如果传入err,则进入结果回调。	
 					 _callback()
 				}else{
-					console.log('GET:' + item);
+					logger.debug('GET:' + item);
+					
 					var $ = cheerio.load(res.text);
 					var title = $('.topic_full_title').eq(0).text().trim();
 					var content = $('.markdown-text').eq(0).text().trim();
 					var replies = $('.reply_content').map(function(){
 						return $(this).text().trim();
 					}).get();
-					console.log(callback);
 					
 					_callback(null, {title:title, replies:replies});		
 				}
@@ -121,13 +121,12 @@ app.get('/topics', function(req, res){
 	
 		async.mapLimit(items, 10, foo, function(err, result){
 			clearTimeout(timer);
-			
 			if(err){
-				console.log('err:' + err.message);				
+				logger.error(err);				
 			}
 
-			result = result.filter(n => n);
-			console.log('complete:' + result.length 
+			result = result.filter(n => n);	
+			logger.debug('complete:' + result.length 
 			+ '\nduration:' + (new Date() - startDate) + 'ms');
 			var str = JSON.stringify(result,null,4);
 			res.set({
