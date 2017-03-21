@@ -1,5 +1,6 @@
 # Logs
-logs
+# travis 跑测试时需要 logs 目录
+# logs
 *.log
 npm-debug.log*
 yarn-debug.log*
